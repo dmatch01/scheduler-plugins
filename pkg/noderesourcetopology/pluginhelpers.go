@@ -18,12 +18,18 @@ package noderesourcetopology
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
+
+	"github.com/dustin/go-humanize"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 
 	topologyv1alpha1 "github.com/k8stopologyawareschedwg/noderesourcetopology-api/pkg/apis/topology/v1alpha1"
 	topoclientset "github.com/k8stopologyawareschedwg/noderesourcetopology-api/pkg/generated/clientset/versioned"
@@ -75,6 +81,7 @@ func createNUMANodeList(zones topologyv1alpha1.ZoneList) NUMANodeList {
 				continue
 			}
 			resources := extractResources(zone)
+			klog.V(6).InfoS("extracted NUMA resources", resourceListToLoggable(zone.Name, resources)...)
 			nodes = append(nodes, NUMANode{NUMAID: numaID, Resources: resources})
 		}
 	}
@@ -89,6 +96,35 @@ func makePodByResourceList(resources *v1.ResourceList) *v1.Pod {
 					Resources: v1.ResourceRequirements{
 						Requests: *resources,
 						Limits:   *resources,
+					},
+				},
+			},
+		},
+	}
+}
+
+func makePodWithReqByResourceList(resources *v1.ResourceList) *v1.Pod {
+	return &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Resources: v1.ResourceRequirements{
+						Requests: *resources,
+					},
+				},
+			},
+		},
+	}
+}
+
+func makePodWithReqAndLimitByResourceList(resourcesReq, resourcesLim *v1.ResourceList) *v1.Pod {
+	return &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Resources: v1.ResourceRequirements{
+						Requests: *resourcesReq,
+						Limits:   *resourcesLim,
 					},
 				},
 			},
@@ -139,10 +175,45 @@ func makePodByResourceListWithManyContainers(resources *v1.ResourceList, contain
 func extractResources(zone topologyv1alpha1.Zone) v1.ResourceList {
 	res := make(v1.ResourceList)
 	for _, resInfo := range zone.Resources {
-		klog.V(5).InfoS("Extract resources for zone", "resName", resInfo.Name, "resAvailable", resInfo.Available)
 		res[v1.ResourceName(resInfo.Name)] = resInfo.Available
 	}
 	return res
+}
+
+func logNumaNodes(desc, nodeName string, nodes NUMANodeList) {
+	for _, numaNode := range nodes {
+		numaLogKey := fmt.Sprintf("%s/node-%d", nodeName, numaNode.NUMAID)
+		klog.V(6).InfoS(desc, resourceListToLoggable(numaLogKey, numaNode.Resources)...)
+	}
+}
+
+func resourceListToLoggable(logKey string, resources v1.ResourceList) []interface{} {
+	items := []interface{}{"logKey", logKey}
+
+	resNames := []string{}
+	for resName := range resources {
+		resNames = append(resNames, string(resName))
+	}
+	sort.Strings(resNames)
+
+	for _, resName := range resNames {
+		qty := resources[v1.ResourceName(resName)]
+		items = append(items, resName)
+		resVal, _ := qty.AsInt64()
+		if needsHumanization(resName) {
+			items = append(items, humanize.IBytes(uint64(resVal)))
+		} else {
+			items = append(items, strconv.FormatInt(resVal, 10))
+		}
+	}
+	return items
+}
+
+func needsHumanization(resName string) bool {
+	// memory-related resources may be expressed in KiB/Bytes, which makes
+	// for long numbers, harder to read and compare. To make it easier for
+	// the reader, we express them in a more compact form using go-humanize.
+	return resName == string(v1.ResourceMemory) || v1helper.IsHugePageResourceName(v1.ResourceName(resName))
 }
 
 func newPolicyHandlerMap() PolicyHandlerMap {
@@ -150,4 +221,18 @@ func newPolicyHandlerMap() PolicyHandlerMap {
 		topologyv1alpha1.SingleNUMANodePodLevel:       newPodScopedHandler(),
 		topologyv1alpha1.SingleNUMANodeContainerLevel: newContainerScopedHandler(),
 	}
+}
+
+func logNRT(desc string, nrtObj *topologyv1alpha1.NodeResourceTopology) {
+	if !klog.V(6).Enabled() {
+		// avoid the expensive marshal operation
+		return
+	}
+
+	ntrJson, err := json.MarshalIndent(nrtObj, "", " ")
+	if err != nil {
+		klog.V(6).ErrorS(err, "failed to marshal noderesourcetopology object")
+		return
+	}
+	klog.V(6).Info(desc, "noderesourcetopology", string(ntrJson))
 }
