@@ -70,6 +70,9 @@ var (
 		{Name: string(v1.ResourceCPU), Weight: 1},
 		{Name: string(v1.ResourceMemory), Weight: 1},
 	}
+
+	// Defaults for ScoreByLabel plugin
+	DefaultLabelKey = "score-by-label"
 )
 
 // SetDefaults_CoschedulingArgs sets the default parameters for Coscheduling plugin.
@@ -150,4 +153,11 @@ func SetDefaults_NodeResourceTopologyMatchArgs(obj *NodeResourceTopologyMatchArg
 // SetDefaults_PreemptionTolerationArgs reuses SetDefaults_DefaultPreemptionArgs
 func SetDefaults_PreemptionTolerationArgs(obj *PreemptionTolerationArgs) {
 	k8sschedulerconfigv1beta3.SetDefaults_DefaultPreemptionArgs((*schedulerconfigv1beta3.DefaultPreemptionArgs)(obj))
+}
+
+// SetDefaultScoreByLabelArgs sets the default parameters for the ScoreByLabel plugin
+func SetDefaultScoreByLabelArgs(obj *ScoreByLabelArgs) {
+	if obj.LabelKey == nil {
+		obj.LabelKey = &DefaultLabelKey
+	}
 }

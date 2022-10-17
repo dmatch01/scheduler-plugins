@@ -146,3 +146,14 @@ type NodeResourceTopologyMatchArgs struct {
 
 // PreemptionTolerationArgs reuses DefaultPluginArgs.
 type PreemptionTolerationArgs schedulerconfigv1beta2.DefaultPreemptionArgs
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ScoreByLabelArgs holds arguments used to configure the ScoreByLabel plugin.
+type ScoreByLabelArgs struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// LabelKey is the name of the label to be used for scoring.
+	LabelKey *string `json:"watcherAddress,omitempty"`
+}
+
