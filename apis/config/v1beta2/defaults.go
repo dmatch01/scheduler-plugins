@@ -160,8 +160,8 @@ func SetDefaults_PreemptionTolerationArgs(obj *PreemptionTolerationArgs) {
 }
 
 
-// SetDefaultScoreByLabelArgs sets the default parameters for the ScoreByLabel plugin
-func SetDefaultScoreByLabelArgs(obj *ScoreByLabelArgs) {
+// SetDefaults_ScoreByLabelArgs sets the default parameters for the ScoreByLabel plugin
+func SetDefaults_ScoreByLabelArgs(obj *ScoreByLabelArgs) {
 	if obj.LabelKey == nil {
 		obj.LabelKey = &DefaultLabelKey
 	}

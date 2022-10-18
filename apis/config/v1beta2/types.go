@@ -154,6 +154,6 @@ type ScoreByLabelArgs struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// LabelKey is the name of the label to be used for scoring.
-	LabelKey *string `json:"watcherAddress,omitempty"`
+	LabelKey *string `json:"labelKey,omitempty"`
 }
 

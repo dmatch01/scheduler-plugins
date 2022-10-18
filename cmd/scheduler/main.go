@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"sigs.k8s.io/scheduler-plugins/pkg/scorebylabel"
 
 	"k8s.io/component-base/cli"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
@@ -52,6 +53,8 @@ func main() {
 		// app.WithPlugin(crossnodepreemption.Name, crossnodepreemption.New),
 		app.WithPlugin(podstate.Name, podstate.New),
 		app.WithPlugin(qos.Name, qos.New),
+		// added the scoreByLabel plugin
+		app.WithPlugin(scorebylabel.Name, scorebylabel.New),
 	)
 
 	code := cli.Run(command)
