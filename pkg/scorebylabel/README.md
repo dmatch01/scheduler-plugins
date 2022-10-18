@@ -7,7 +7,7 @@ This folder holds a tutorial for [KubeCon 2022 Detroit](https://events.linuxfoun
 - [Go](https://golang.org/doc/install) 1.17 installed
 
 ## Tutorial to write a ScoreByLabel score plugin
-1. Prepare ScoreByLabel Plugin
+##### 1. Prepare ScoreByLabel Plugin
 
 In this tutorial, we are going to build a Socre Plugin named "ScoreByLabel" that favors nodes with higher scores defined by a specific label.
 
@@ -37,7 +37,7 @@ func (s *ScoreByLabel) Name() string {
 }
 ```
 
-2. Prepare `ScoreByLabelArgs` that holds the configurations under `apis/config` folder.
+##### 2. Prepare `ScoreByLabelArgs` that holds the configurations under `apis/config` folder.
 
 We will then need to declare a new struct called `ScoreByLabelArgs` that will contain the label name that we want to use to prioritize nodes.
 We will add the configuration in two places: `apis/config/types.go` and `apis/config/v1beta2/types.go`. 
@@ -116,5 +116,43 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ScoreByLabelArgs{},
 	)
 	return nil
+}
+```
+
+The files that will be updated are shown in the following file structure.
+```tree
+|- scheduler-plugins
+    |- apis
+        |- config
+            |- types.go
+            |- v1beta2
+                |- types.go
+                |- defaults.go
+                |- register.go
+                |- zz_generated.deepcopy.go
+                |- zz_generated.defaults.go
+                |- zz_generated.conversion.go
+            |- register.go
+            |- zz_generated.deepcopy.go
+``` 
+
+With the `ScoreByLabelArgs` struct defined, we can now add the `New` function in the `pkg/scorebylabel/scorebylabel.go` file 
+to follow the scheduler framework `PluginFactory` interface.
+```go
+var LabelKey string
+
+// New initializes a new plugin and returns it.
+func New(obj runtime.Object, h framework.Handle) (framework.Plugin, error) {
+	var args, ok = obj.(*pluginConfig.ScoreByLabelArgs)
+	if !ok {
+		return nil, fmt.Errorf("[ScoreByLabelArgs] want args to be of type ScoreByLabelArgs, got %T", obj)
+	}
+
+	klog.Infof("[ScoreByLabelArgs] args received. LabelKey: %s", args.LabelKey)
+	LabelKey = args.LabelKey
+
+	return &ScoreByLabel{
+		handle:     h,
+	}, nil
 }
 ```
