@@ -53,7 +53,6 @@ func (s *ScoreByLabel) Score(ctx context.Context, state *framework.CycleState, p
 	}
 
 	nodeLabels := nodeInfo.Node().Labels
-	fmt.Printf("node labels: %v", nodeLabels)
 
 	if val, ok := nodeLabels[LabelKey]; ok {
 		scoreVal, err := strconv.ParseInt(val, 10, 64)
@@ -62,6 +61,8 @@ func (s *ScoreByLabel) Score(ctx context.Context, state *framework.CycleState, p
 			klog.V(4).InfoS("use the default score", DefaultMissingLabelScore, " for node with labels not convertable to int64!")
 			return DefaultMissingLabelScore, nil
 		}
+
+		klog.Infof("[ScoreByLabel] Label score for node %s is %s = %v", nodeName, LabelKey, scoreVal)
 
 		return scoreVal, nil
 	}
