@@ -10,6 +10,8 @@ profiles:
     score:
       enabled:
       - name: ScoreByLabel
+      disabled:
+        - name: "*" # disable all default plugins
   pluginConfig:
     - name: ScoreByLabel
       args:

@@ -18,7 +18,6 @@ package main
 
 import (
 	"os"
-	"sigs.k8s.io/scheduler-plugins/pkg/scorebylabel"
 
 	"k8s.io/component-base/cli"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
@@ -30,6 +29,7 @@ import (
 	"sigs.k8s.io/scheduler-plugins/pkg/podstate"
 	"sigs.k8s.io/scheduler-plugins/pkg/preemptiontoleration"
 	"sigs.k8s.io/scheduler-plugins/pkg/qos"
+	"sigs.k8s.io/scheduler-plugins/pkg/scorebylabel"
 	"sigs.k8s.io/scheduler-plugins/pkg/trimaran/loadvariationriskbalancing"
 	"sigs.k8s.io/scheduler-plugins/pkg/trimaran/targetloadpacking"
 

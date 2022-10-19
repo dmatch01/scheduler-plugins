@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: scorebylabel-scheduler
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: scheduler-plugins
+rules:
+  - apiGroups: [""]
+    resources: ["replicationcontrollers", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims", "persistentvolumes"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes", "storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [ "" ]
+    resources: [ "configmaps" ]
+    verbs: [ "get", "list", "watch" ]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: schedulerplugins-clusterrolebinding
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: scheduler-plugins
+subjects:
+  - kind: ServiceAccount
+    name: scorebylabel-scheduler
+    namespace: default
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: scorebylabel-scheduler-clusterrolebinding
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-scheduler
+subjects:
+  - kind: ServiceAccount
+    name: scorebylabel-scheduler
+    namespace: default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scorebylabel-scheduler-config
+data:
+  config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1beta2
+    kind: KubeSchedulerConfiguration
+    leaderElection:
+      leaderElect: false
+    profiles:
+      - schedulerName: scorebylabel
+        plugins:
+          score:
+            enabled:
+              - name: ScoreByLabel
+            disabled:
+              - name: "*" # disable all default plugins
+        pluginConfig:
+          - name: ScoreByLabel
+            args:
+              labelKey: "score-by-label"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scorebylabel-scheduler
+  labels:
+    app: scorebylabel-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scorebylabel-scheduler
+  template:
+    metadata:
+      labels:
+        app: scorebylabel-scheduler
+    spec:
+      serviceAccount: scorebylabel-scheduler
+      volumes:
+        - name: etckubernetes
+          configMap:
+            name: scorebylabel-scheduler-config
+      containers:
+        - name: kube-scheduler
+          image: quay.io/chenw615/scorebylabel:latest
+          imagePullPolicy: Always
+          args:
+            - /bin/kube-scheduler
+            - --config=/etc/kubernetes/config.yaml
+            - -v=6
+          volumeMounts:
+            - name: etckubernetes
+              mountPath: /etc/kubernetes
