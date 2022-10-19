@@ -83,6 +83,7 @@ func SetDefaults_ScoreByLabelArgs(obj *ScoreByLabelArgs) {
 		obj.LabelKey = &DefaultLabelKey
 	}
 }
+```
 
 With the structs added, we need to execute the hack/update-codegen.sh script. 
 It will update the generated files with functions as DeepCopy for the added structures.
