@@ -383,5 +383,5 @@ kubectl get events |grep testpod
 ```
 
 #### 7. Demo video
-<video src='https://youtu.be/ZDkvMtuc2JE' width=180/>
+<iframe width="560" height="315" src="https://youtu.be/ZDkvMtuc2JE" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
