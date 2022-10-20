@@ -7,7 +7,7 @@ This folder holds a tutorial for [KubeCon 2022 Detroit](https://events.linuxfoun
 - [Go](https://golang.org/doc/install) 1.17 installed
 
 ## Tutorial to write a ScoreByLabel score plugin
-##### 1. Prepare ScoreByLabel Plugin
+#### 1. Prepare ScoreByLabel Plugin
 In this tutorial, we are going to build a Socre Plugin named "ScoreByLabel" that favors nodes with higher scores defined by a specific label.
 To start, we create the folder `pkg/scorebylabel` and the file `pkg/scorebylabel/score_by_label.go` in the following structure:
 
@@ -35,7 +35,62 @@ func (s *ScoreByLabel) Name() string {
 }
 ```
 
-##### 2. Prepare `ScoreByLabelArgs` that holds the configurations under `apis/config` folder.
+Then, we implement the `Score()` function of the ScorePlugin interface. In this function, we will use the `NodeInfo` interface to 
+get the labels of the node and then read the node labeled values as scores.
+```go
+func (s *ScoreByLabel) Score(ctx context.Context, state *framework.CycleState, p *v1.Pod, nodeName string) (int64, *framework.Status) {
+	nodeInfo, err := s.handle.SnapshotSharedLister().NodeInfos().Get(nodeName)
+	if err != nil {
+		return 0, framework.NewStatus(framework.Error, fmt.Sprintf("error getting node information: %s", err))
+	}
+
+	nodeLabels := nodeInfo.Node().Labels
+
+	if val, ok := nodeLabels[LabelKey]; ok {
+		scoreVal, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			klog.V(4).InfoS("unable to parse score value from node labels", LabelKey, "=", val)
+			klog.V(4).InfoS("use the default score", DefaultMissingLabelScore, " for node with labels not convertable to int64!")
+			return DefaultMissingLabelScore, nil
+		}
+
+		klog.Infof("[ScoreByLabel] Label score for node %s is %s = %v", nodeName, LabelKey, scoreVal)
+
+		return scoreVal, nil
+	}
+
+	return DefaultMissingLabelScore, nil
+}
+```
+
+As the labeled scores may not fall in the range of 0 to 100, which is expected by the framework, we need to normalize the scores to the range of 0 to 100.
+To do so, we implement the `NormalizeScore()` function of the ScorePlugin interface. In this function, we will get the scores of all nodes and then normalize the scores.
+```go
+
+func (s *ScoreByLabel) ScoreExtensions() framework.ScoreExtensions {
+	return s
+}
+
+func (s *ScoreByLabel) NormalizeScore(ctx context.Context, state *framework.CycleState, p *v1.Pod, scores framework.NodeScoreList) *framework.Status {
+	var higherScore int64
+	higherScore = framework.MinNodeScore
+	for _, node := range scores {
+		if higherScore < node.Score {
+			higherScore = node.Score
+		}
+	}
+
+	for i, node := range scores {
+		scores[i].Score = node.Score * framework.MaxNodeScore / higherScore
+	}
+
+	klog.Infof("[ScoreByLabel] Nodes final score: %v", scores)
+	return nil
+}
+```
+
+
+#### 2. Prepare `ScoreByLabelArgs` that holds the configurations under `apis/config` folder.
 We will then need to declare a new struct called `ScoreByLabelArgs` that will contain the label name that we want to use to prioritize nodes.
 We will add the configuration in two places: `apis/config/types.go` and `apis/config/v1beta2/types.go`. 
 The `apis/config/types.go` holds the struct we will use in the New function.
@@ -155,7 +210,7 @@ func New(obj runtime.Object, h framework.Handle) (framework.Plugin, error) {
 }
 ```
 
-##### 3. Registering the `ScoreByLabel` plugin
+#### 3. Registering the `ScoreByLabel` plugin
 Now we have both `ScoreByLabel` plugin and `ScoreByLabelArgs` struct ready, we then need to register the plugin in the 
 `cmd/scheduler/main.go` to include the plugin in the scheduler runtime. In the `main` function, we can register a new
 plugin via the `app.NewSchedulerCommand` function with the following line:
@@ -168,7 +223,7 @@ plugin via the `app.NewSchedulerCommand` function with the following line:
 In the `cmd/scheduler/main.go`  file we have the import of sigs.k8s.io/scheduler-plugins/pkg/apis/config/scheme, 
 which initializes the scheme with all configurations we have introduced in the pkg/apis/config files.
 
-##### 4. Configure the scheduler to enable only the `ScoreByLabel` plugin
+#### 4. Configure the scheduler to enable only the `ScoreByLabel` plugin
 The scheduler built from `scheduler-plugins` can configure scheduler profiles via the `KubeSchedulerConfiguration` struct.
 Each profile allows plugins to be enabled, disabled and configured according to the configurations parameters defined by the plugin.
 Here is an example configuration of the scheduler to enable `ScoreByLabel` plugin only and disabled all other plugins.
@@ -191,7 +246,7 @@ profiles:
         labelKey: "score-by-label"
 ```
 
-##### 5. Build the scheduler image and run the `scorebylabel` scheduler as a secondary scheduler
+#### 5. Build the scheduler image and run the `scorebylabel` scheduler as a secondary scheduler
 1. Build the scheduler image
 We can use the provided `Makefile` to build the scheduler image. The `Makefile` will build the scheduler image locally
 when we run the following. You can change `LOCAL_REGISTRY=localhost:5000/scheduler-plugins` and `LOCAL_IMAGE=kube-scheduler:latest`
@@ -276,7 +331,7 @@ We run the following command to deploy the scorebylabel scheduler in the `defaul
 kubectl apply -f manifests/scorebylabel/install/scorebylabel-scheduler.yaml
 ```
 
-##### 6. Run the testing pods to use the scorebylabel scheduler
+#### 6. Run the testing pods to use the scorebylabel scheduler
 1. Let's label the nodes with the label `score-by-label` with the following command.
 ```bash
 kubectl label node <node-name-1> score-by-label=1
@@ -327,7 +382,7 @@ I1019 15:39:30.061996       1 scorebylabel.go:90] [ScoreByLabel] Nodes final sco
 kubectl get events |grep testpod
 ```
 
-##### 7. Demo video
-
+#### 7. Demo video
+[![ScoreByLabel Plugin Demo](https://i9.ytimg.com/vi/ZDkvMtuc2JE/mq1.jpg?sqp=CIitwpoG&rs=AOn4CLDLKEMRvJSLyGTjfuJEv3y4-Fnheg)](https://youtu.be/ZDkvMtuc2JE)
 
 
