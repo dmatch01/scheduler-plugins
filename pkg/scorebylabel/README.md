@@ -383,6 +383,5 @@ kubectl get events |grep testpod
 ```
 
 #### 7. Demo video
-[![ScoreByLabel Plugin Demo](https://i9.ytimg.com/vi/ZDkvMtuc2JE/mq1.jpg?sqp=CIitwpoG&rs=AOn4CLDLKEMRvJSLyGTjfuJEv3y4-Fnheg)](https://youtu.be/ZDkvMtuc2JE)
-
+<video src='https://youtu.be/ZDkvMtuc2JE' width=180/>
 
