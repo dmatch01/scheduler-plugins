@@ -335,8 +335,8 @@ kubectl apply -f manifests/scorebylabel/install/scorebylabel-scheduler.yaml
 1. Let's label the nodes with the label `score-by-label` with the following command.
 ```bash
 kubectl label node <node-name-1> score-by-label=1
-kubectl label node <node-name-1> score-by-label=5
-kubectl label node <node-name-1> score-by-label=10
+kubectl label node <node-name-2> score-by-label=5
+kubectl label node <node-name-3> score-by-label=10
 ```
 
 2. We can create a testing pod to use the `scorebylabel` scheduler by specifying the `schedulerName` in the pod spec as shown below.
