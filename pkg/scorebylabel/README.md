@@ -8,7 +8,7 @@ This folder holds a tutorial for [KubeCon 2022 Detroit](https://events.linuxfoun
 
 ## Tutorial to write a ScoreByLabel score plugin
 #### 1. Prepare ScoreByLabel Plugin
-In this tutorial, we are going to build a Socre Plugin named "ScoreByLabel" that favors nodes with higher scores defined by a specific label.
+In this tutorial, we are going to build a Score Plugin named "ScoreByLabel" that favors nodes with higher scores defined by a specific label.
 To start, we create the folder `pkg/scorebylabel` and the file `pkg/scorebylabel/score_by_label.go` in the following structure:
 
 ```tree
